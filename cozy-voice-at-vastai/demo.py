@@ -7,5 +7,5 @@ import torchaudio
 cosyvoice = CosyVoice2('pretrained_models/CosyVoice2-0.5B', load_jit=True, load_onnx=False, load_trt=False)
 
 prompt_speech_16k = load_wav('zero_shot_prompt.wav', 16000)
-for i, j in enumerate(cosyvoice.inference_zero_shot('他在旧书店找到一本泛黄的笔记本，封面上写着一个熟悉的名字。他愣住了，指尖不自觉地摩挲着那几个字。他曾经爱过她，那是十年前的事了。笔记本里满是她随手写下的碎语，偶尔夹着一两张泛白的照片。', '希望你以后能够做的比我还好呦。', prompt_speech_16k, stream=False)):
+for i, j in enumerate(cosyvoice.inference_zero_shot('十四年前我创办小米的时候,讲过一句话。我说当台风来的时候连猪都会飞,讲的是大家有像猪一样的态度,你就可以成功。把握机遇的重要性非常重要。', '用粤语说这句话。', prompt_speech_16k, stream=False)):
     torchaudio.save('zero_shot_{}.wav'.format(i), j['tts_speech'], cosyvoice.sample_rate)
