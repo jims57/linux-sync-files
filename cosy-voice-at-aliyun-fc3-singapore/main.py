@@ -10,33 +10,22 @@ import onnxruntime as ort
 text = "陈四，你好。十四年前我创办小米的时候，讲过一句话。我说当台风来的时候连猪都会飞，讲的是大家有像猪一样的态度，你就可以成功。把握机遇的重要性非常重要。"
 prompt = "希望你以后能够做的比我还好呦。"
 
-# Configure ONNX Runtime settings before model loading
-session_options = ort.SessionOptions()
-session_options.graph_optimization_level = ort.GraphOptimizationLevel.ORT_ENABLE_ALL
-session_options.log_severity_level = 3  # Reduce logging verbosity
-session_options.enable_cpu_mem_arena = False  # Reduce memory usage
-session_options.enable_mem_pattern = False    # Reduce memory usage
+# Configure ONNX Runtime global settings
+ort.set_default_logger_severity(3)  # Reduce logging verbosity
 
-# If using CUDA
-providers = [
-    ('CUDAExecutionProvider', {
-        'device_id': 0,
-        'arena_extend_strategy': 'kNextPowerOfTwo',
-        'gpu_mem_limit': 2 * 1024 * 1024 * 1024,  # 2GB
-        'cudnn_conv_algo_search': 'EXHAUSTIVE',
-        'do_copy_in_default_stream': True,
-    }),
-    'CPUExecutionProvider'
-]
+# If using CUDA, set the global provider options
+if 'CUDAExecutionProvider' in ort.get_available_providers():
+    ort.set_default_logger_severity(3)
+    providers = ['CUDAExecutionProvider', 'CPUExecutionProvider']
+else:
+    providers = ['CPUExecutionProvider']
 
-# Update your CosyVoice2 initialization
+# Initialize CosyVoice2 with supported parameters
 cosyvoice = CosyVoice2(
     'pretrained_models/CosyVoice2-0.5B',
     load_jit=True,
     load_onnx=True,  # Enable ONNX
-    load_trt=False,
-    onnx_session_options=session_options,
-    onnx_providers=providers
+    load_trt=False
 )
 prompt_speech_16k = load_wav('zero_shot_prompt.wav', 16000)
 
