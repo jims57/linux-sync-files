@@ -7,7 +7,7 @@ import warnings
 import onnxruntime as ort
 
 # Fix text encoding by using proper UTF-8 strings
-text = "陈五，你好。十四年前我创办小米的时候，讲过一句话。我说当台风来的时候连猪都会飞，讲的是大家有像猪一样的态度，你就可以成功。把握机遇的重要性非常重要。"
+text = "陈六，你好。十四年前我创办小米的时候，讲过一句话。我说当台风来的时候连猪都会飞，讲的是大家有像猪一样的态度，你就可以成功。把握机遇的重要性非常重要。"
 prompt = "希望你以后能够做的比我还好呦。"
 
 # Configure ONNX Runtime global settings
@@ -22,10 +22,10 @@ else:
 
 # Initialize CosyVoice2 with supported parameters
 cosyvoice = CosyVoice2(
-    'pretrained_models/CosyVoice2-0.5B',
-    load_jit=True,
-    load_onnx=True,  # Enable ONNX
-    load_trt=False
+    model_dir='pretrained_models/CosyVoice2-0.5B',
+    load_jit=False,      # default is False
+    load_onnx=False,     # default is False
+    load_trt=False       # default is False
 )
 prompt_speech_16k = load_wav('zero_shot_prompt.wav', 16000)
 
