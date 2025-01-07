@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CosyVoice TTS Demo</title>
+    <!-- Import Element Plus CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/element-plus/dist/index.css">
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f7fa;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .audio-container {
+            margin-top: 20px;
+        }
+        .chunk-item {
+            margin: 10px 0;
+            padding: 10px;
+            background-color: #fff;
+            border-radius: 4px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+        .status-indicator {
+            margin-top: 20px;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <div id="app">
+        <div class="container">
+            <div class="header">
+                <h1>CosyVoice TTS Demo</h1>
+            </div>
+            
+            <el-form @submit.prevent="generateSpeech">
+                <el-form-item>
+                    <el-input
+                        v-model="inputText"
+                        type="textarea"
+                        :rows="4"
+                        :placeholder="'请输入要转换的文字...'"
+                        :disabled="isGenerating"
+                    ></el-input>
+                </el-form-item>
+                
+                <el-form-item>
+                    <el-button 
+                        type="primary" 
+                        @click="generateSpeech" 
+                        :loading="isGenerating"
+                        :disabled="!inputText || isGenerating"
+                    >
+                        {{ isGenerating ? '生成中...' : '生成语音' }}
+                    </el-button>
+                    <el-button 
+                        @click="clearAll" 
+                        :disabled="isGenerating || audioChunks.length === 0"
+                    >
+                        清除所有
+                    </el-button>
+                </el-form-item>
+            </el-form>
+
+            <div class="status-indicator" v-if="isGenerating">
+                <el-progress type="circle" :percentage="generationProgress"></el-progress>
+            </div>
+
+            <div class="audio-container" v-if="audioChunks.length > 0">
+                <h3>生成的音频片段:</h3>
+                <div class="chunk-item" v-for="chunk in audioChunks" :key="chunk.id">
+                    <div>片段 #{{ chunk.id + 1 }}</div>
+                    <audio :src="chunk.audioUrl" controls></audio>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Import Vue 3 -->
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <!-- Import Element Plus -->
+    <script src="https://unpkg.com/element-plus"></script>
+    <!-- Import Element Plus Icons -->
+    <script src="https://unpkg.com/@element-plus/icons-vue"></script>
+    
+    <script>
+        const { createApp, ref } = Vue;
+        const { ElMessage } = ElementPlus;
+
+        const app = createApp({
+            setup() {
+                const inputText = ref('');
+                const isGenerating = ref(false);
+                const audioChunks = ref([]);
+                const generationProgress = ref(0);
+                let ws = null;
+
+                const generateSpeech = () => {
+                    if (!inputText.value || isGenerating.value) return;
+                    
+                    isGenerating.value = true;
+                    audioChunks.value = [];
+                    generationProgress.value = 0;
+
+                    // Updated WebSocket URL with port 50000
+                    ws = new WebSocket('ws://tts.watchfun-intelligence.com:50000/tts');
+
+                    ws.onopen = () => {
+                        ws.send(inputText.value);
+                    };
+
+                    ws.onmessage = (event) => {
+                        const data = JSON.parse(event.data);
+                        
+                        if (data.error) {
+                            ElMessage.error('Error: ' + data.error);
+                            isGenerating.value = false;
+                            return;
+                        }
+
+                        // Create audio URL from base64 data
+                        const audioBlob = base64ToBlob(data.audio_data, 'audio/wav');
+                        const audioUrl = URL.createObjectURL(audioBlob);
+                        
+                        // Add to audio chunks
+                        audioChunks.value.push({
+                            id: data.chunk_id,
+                            audioUrl: audioUrl
+                        });
+
+                        // Update progress (assuming approximately 10 chunks total)
+                        generationProgress.value = Math.min(Math.round((data.chunk_id + 1) * 10), 100);
+                    };
+
+                    ws.onclose = () => {
+                        isGenerating.value = false;
+                        generationProgress.value = 100;
+                    };
+
+                    ws.onerror = (error) => {
+                        ElMessage.error('WebSocket error occurred');
+                        isGenerating.value = false;
+                    };
+                };
+
+                const clearAll = () => {
+                    // Clean up audio URLs
+                    audioChunks.value.forEach(chunk => {
+                        URL.revokeObjectURL(chunk.audioUrl);
+                    });
+                    audioChunks.value = [];
+                    generationProgress.value = 0;
+                };
+
+                const base64ToBlob = (base64, type) => {
+                    const binStr = atob(base64);
+                    const len = binStr.length;
+                    const arr = new Uint8Array(len);
+                    for (let i = 0; i < len; i++) {
+                        arr[i] = binStr.charCodeAt(i);
+                    }
+                    return new Blob([arr], { type: type });
+                };
+
+                return {
+                    inputText,
+                    isGenerating,
+                    audioChunks,
+                    generationProgress,
+                    generateSpeech,
+                    clearAll
+                };
+            }
+        });
+
+        app.use(ElementPlus);
+        app.mount('#app');
+    </script>
+</body>
+</html> 
