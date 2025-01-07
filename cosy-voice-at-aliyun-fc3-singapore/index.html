@@ -46,6 +46,14 @@
             </div>
             
             <el-form @submit.prevent="generateSpeech">
+                <div style="margin-bottom: 10px;">
+                    此WebSocket链接是： ws://tts.watchfun-intelligence.com:50000/tts
+                </div>
+                <div style="margin-bottom: 10px;">
+                    【说明】：<br>
+                    1、暂时忽略处理速度问题，因现在还是Beta阶段，先实现功能。<br>
+                    2、后期再考虑升级GPU性能，或代码优化。
+                </div>
                 <el-form-item>
                     <el-input
                         v-model="inputText"
