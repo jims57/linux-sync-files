@@ -87,7 +87,14 @@
 
             <div class="audio-container" v-if="audioChunks.length > 0">
                 <h3>完整音频（合成后）：</h3>
-                <audio :src="combinedAudioUrl" controls v-if="combinedAudioUrl"></audio>
+                <div class="combined-audio-player">
+                    <audio 
+                        ref="combinedAudioPlayer" 
+                        :src="audioChunks[currentChunkIndex]?.audioUrl" 
+                        @ended="playNextChunk" 
+                        controls
+                    ></audio>
+                </div>
             </div>
 
             <div class="audio-container" v-if="audioChunks.length > 0">
@@ -117,7 +124,8 @@
                 const isGenerating = ref(false);
                 const audioChunks = ref([]);
                 const generationProgress = ref(0);
-                const combinedAudioUrl = ref(null);
+                const currentChunkIndex = ref(0);
+                const combinedAudioPlayer = ref(null);
                 let ws = null;
 
                 const sentences = [
@@ -188,9 +196,6 @@
                     ws.onclose = () => {
                         isGenerating.value = false;
                         generationProgress.value = 100;
-                        
-                        // Combine all audio chunks when generation is complete
-                        combineAudioChunks();
                     };
 
                     ws.onerror = (error) => {
@@ -199,35 +204,31 @@
                     };
                 };
 
-                const combineAudioChunks = async () => {
-                    if (audioChunks.value.length === 0) return;
-                    
-                    // Create an array of audio blobs
-                    const audioPromises = audioChunks.value.map(chunk => 
-                        fetch(chunk.audioUrl).then(response => response.blob())
-                    );
-                    
-                    const audioBlobs = await Promise.all(audioPromises);
-                    const combinedBlob = new Blob(audioBlobs, { type: 'audio/wav' });
-                    
-                    // Clean up previous combined audio URL if it exists
-                    if (combinedAudioUrl.value) {
-                        URL.revokeObjectURL(combinedAudioUrl.value);
+                const playNextChunk = () => {
+                    if (currentChunkIndex.value < audioChunks.value.length - 1) {
+                        currentChunkIndex.value++;
+                        // Need to manually load and play the next chunk
+                        combinedAudioPlayer.value.load();
+                        // Add a small delay before playing to ensure the audio is loaded
+                        setTimeout(() => {
+                            const playPromise = combinedAudioPlayer.value.play();
+                            if (playPromise !== undefined) {
+                                playPromise.catch(error => {
+                                    console.log("Auto-play prevented:", error);
+                                });
+                            }
+                        }, 100);
+                    } else {
+                        currentChunkIndex.value = 0; // Reset to beginning when all chunks are played
                     }
-                    
-                    combinedAudioUrl.value = URL.createObjectURL(combinedBlob);
                 };
 
                 const clearAll = () => {
-                    // Clean up audio URLs
                     audioChunks.value.forEach(chunk => {
                         URL.revokeObjectURL(chunk.audioUrl);
                     });
-                    if (combinedAudioUrl.value) {
-                        URL.revokeObjectURL(combinedAudioUrl.value);
-                        combinedAudioUrl.value = null;
-                    }
                     audioChunks.value = [];
+                    currentChunkIndex.value = 0;
                     generationProgress.value = 0;
                 };
 
@@ -249,7 +250,9 @@
                     generateSpeech,
                     clearAll,
                     generateRandomSentence,
-                    combinedAudioUrl
+                    currentChunkIndex,
+                    playNextChunk,
+                    combinedAudioPlayer
                 };
             }
         });
