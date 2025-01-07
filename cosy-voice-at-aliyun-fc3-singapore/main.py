@@ -7,7 +7,7 @@ import warnings
 import onnxruntime as ort
 
 # Fix text encoding by using proper UTF-8 strings
-text = "张四，你好。十四年前我创办小米的时候，讲过一句话。我说当台风来的时候连猪都会飞，讲的是大家有像猪一样的态度，你就可以成功。把握机遇的重要性非常重要。"
+text = "甘景元。他在旧书店找到一本泛黄的笔记本，封面上写着一个熟悉的名字。他愣住了，指尖不自觉地摩挲着那几个字。"
 prompt = "希望你以后能够做的比我还好呦。"
 
 # Configure ONNX Runtime global settings
@@ -28,7 +28,7 @@ prompt_speech_16k = load_wav('zero_shot_prompt.wav', 16000)
 warnings.filterwarnings("ignore", category=UserWarning)
 warnings.filterwarnings("ignore", category=FutureWarning)
 
-for i, j in enumerate(cosyvoice.inference_zero_shot(text, prompt, prompt_speech_16k, stream=False)):
+for i, j in enumerate(cosyvoice.inference_zero_shot(text, prompt, prompt_speech_16k, stream=True)):
     output_dir = 'pretrained_models'
     os.makedirs(output_dir, exist_ok=True)
 
