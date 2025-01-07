@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CosyVoice TTS Demo</title>
+    <title>Jimmy TTS Demo</title>
     <!-- Import Element Plus CSS -->
     <link rel="stylesheet" href="https://unpkg.com/element-plus/dist/index.css">
     <style>
@@ -42,7 +42,7 @@
     <div id="app">
         <div class="container">
             <div class="header">
-                <h1>CosyVoice TTS Demo</h1>
+                <h1>Jimmy TTS Demo</h1>
             </div>
             
             <el-form @submit.prevent="generateSpeech">
@@ -70,6 +70,12 @@
                         :disabled="isGenerating || audioChunks.length === 0"
                     >
                         清除所有
+                    </el-button>
+                    <el-button
+                        @click="generateRandomSentence"
+                        :disabled="isGenerating"
+                    >
+                        生成句子
                     </el-button>
                 </el-form-item>
             </el-form>
@@ -106,6 +112,34 @@
                 const audioChunks = ref([]);
                 const generationProgress = ref(0);
                 let ws = null;
+
+                const sentences = [
+                    "今天天气晴朗，阳光照耀着大地，让人心情愉悦。",
+                    "我最近开始学习烹饪，尝试做一些新的菜肴，感觉很有成就感。",
+                    "昨晚我和朋友们一起聚会，聊了很多有趣的事情，笑声不断。",
+                    "每当我听到那首歌，就会想起我们一起度过的美好时光。",
+                    "最近我迷上了摄影，喜欢用相机记录生活中的点滴瞬间。",
+                    "这个周末我们打算去爬山，享受大自然的美丽风景。",
+                    "有时候我会在公园里散步，享受清新的空气和宁静的环境。",
+                    "我们家附近新开了一家咖啡馆，环境很好，非常适合放松心情。",
+                    "昨天我参加了一个有趣的讲座，学到了很多新的知识和见解。",
+                    "最近我在看一本关于心理学的书，觉得非常有趣且启发性强。",
+                    "每天早上我都会喝一杯咖啡，帮助我提神醒脑，开始新的一天。",
+                    "我们计划下个月去海边度假，希望能享受阳光和沙滩的乐趣。",
+                    "有时候我会在晚上写日记，把一天的感受和想法记录下来。",
+                    "最近我开始练习瑜伽，感觉身心都得到了很好的放松和舒缓。",
+                    "昨天我在网上看到一个很有趣的纪录片，立刻就被吸引住了。",
+                    "这个冬天特别寒冷，希望能早点迎来温暖的春天。",
+                    "我们计划去参加一个音乐节，希望能听到喜欢的乐队现场演出。",
+                    "有时候我会在晚上看星星，思考人生中的种种可能性和梦想。",
+                    "最近我在尝试写作，希望能把自己的故事分享给更多的人。",
+                    "昨晚我做了一个奇怪的梦，醒来后还在思考它的含义是什么。"
+                ];
+
+                const generateRandomSentence = () => {
+                    const randomIndex = Math.floor(Math.random() * sentences.length);
+                    inputText.value = sentences[randomIndex];
+                };
 
                 const generateSpeech = () => {
                     if (!inputText.value || isGenerating.value) return;
@@ -180,7 +214,8 @@
                     audioChunks,
                     generationProgress,
                     generateSpeech,
-                    clearAll
+                    clearAll,
+                    generateRandomSentence
                 };
             }
         });
