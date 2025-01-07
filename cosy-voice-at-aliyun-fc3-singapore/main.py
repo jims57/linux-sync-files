@@ -7,7 +7,7 @@ import warnings
 import onnxruntime as ort
 
 # Fix text encoding by using proper UTF-8 strings
-text = "陈七，你好。十四年前我创办小米的时候，讲过一句话。我说当台风来的时候连猪都会飞，讲的是大家有像猪一样的态度，你就可以成功。把握机遇的重要性非常重要。"
+text = "陈八，你好。十四年前我创办小米的时候，讲过一句话。我说当台风来的时候连猪都会飞，讲的是大家有像猪一样的态度，你就可以成功。把握机遇的重要性非常重要。"
 prompt = "希望你以后能够做的比我还好呦。"
 
 # Configure ONNX Runtime global settings
