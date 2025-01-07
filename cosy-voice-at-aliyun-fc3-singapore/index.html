@@ -87,14 +87,7 @@
 
             <div class="audio-container" v-if="audioChunks.length > 0">
                 <h3>完整音频（合成后）：</h3>
-                <div class="combined-audio-player">
-                    <audio 
-                        ref="combinedAudioPlayer" 
-                        :src="audioChunks[currentChunkIndex]?.audioUrl" 
-                        @ended="playNextChunk" 
-                        controls
-                    ></audio>
-                </div>
+                <audio :src="combinedAudioUrl" controls v-if="combinedAudioUrl"></audio>
             </div>
 
             <div class="audio-container" v-if="audioChunks.length > 0">
@@ -126,6 +119,7 @@
                 const generationProgress = ref(0);
                 const currentChunkIndex = ref(0);
                 const combinedAudioPlayer = ref(null);
+                const combinedAudioUrl = ref(null);
                 let ws = null;
 
                 const sentences = [
@@ -196,6 +190,7 @@
                     ws.onclose = () => {
                         isGenerating.value = false;
                         generationProgress.value = 100;
+                        combineAudioChunks(); // Combine the chunks when generation is complete
                     };
 
                     ws.onerror = (error) => {
@@ -227,8 +222,11 @@
                     audioChunks.value.forEach(chunk => {
                         URL.revokeObjectURL(chunk.audioUrl);
                     });
+                    if (combinedAudioUrl.value) {
+                        URL.revokeObjectURL(combinedAudioUrl.value);
+                        combinedAudioUrl.value = null;
+                    }
                     audioChunks.value = [];
-                    currentChunkIndex.value = 0;
                     generationProgress.value = 0;
                 };
 
@@ -242,6 +240,100 @@
                     return new Blob([arr], { type: type });
                 };
 
+                const concatenateAudioBuffers = async (audioContext, audioBuffers) => {
+                    const totalLength = audioBuffers.reduce((sum, buffer) => sum + buffer.length, 0);
+                    const combinedBuffer = audioContext.createBuffer(
+                        1, // mono
+                        totalLength,
+                        audioBuffers[0].sampleRate
+                    );
+                    const channelData = combinedBuffer.getChannelData(0);
+                    
+                    let offset = 0;
+                    audioBuffers.forEach(buffer => {
+                        channelData.set(buffer.getChannelData(0), offset);
+                        offset += buffer.length;
+                    });
+                    
+                    return combinedBuffer;
+                };
+
+                const combineAudioChunks = async () => {
+                    if (audioChunks.value.length === 0) return;
+
+                    try {
+                        const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                        
+                        // Convert all chunks to AudioBuffers
+                        const bufferPromises = audioChunks.value.map(async chunk => {
+                            const response = await fetch(chunk.audioUrl);
+                            const arrayBuffer = await response.arrayBuffer();
+                            return await audioContext.decodeAudioData(arrayBuffer);
+                        });
+
+                        const audioBuffers = await Promise.all(bufferPromises);
+                        const combinedBuffer = await concatenateAudioBuffers(audioContext, audioBuffers);
+
+                        // Convert the combined buffer back to WAV format
+                        const wavData = audioBufferToWav(combinedBuffer);
+                        const blob = new Blob([wavData], { type: 'audio/wav' });
+                        
+                        // Clean up previous URL if it exists
+                        if (combinedAudioUrl.value) {
+                            URL.revokeObjectURL(combinedAudioUrl.value);
+                        }
+                        
+                        combinedAudioUrl.value = URL.createObjectURL(blob);
+                    } catch (error) {
+                        console.error('Error combining audio chunks:', error);
+                    }
+                };
+
+                const audioBufferToWav = (buffer) => {
+                    const numChannels = 1;
+                    const sampleRate = buffer.sampleRate;
+                    const format = 1; // PCM
+                    const bitDepth = 16;
+                    
+                    const bytesPerSample = bitDepth / 8;
+                    const blockAlign = numChannels * bytesPerSample;
+                    
+                    const wav = new ArrayBuffer(44 + buffer.length * bytesPerSample);
+                    const view = new DataView(wav);
+                    
+                    // Write WAV header
+                    const writeString = (view, offset, string) => {
+                        for (let i = 0; i < string.length; i++) {
+                            view.setUint8(offset + i, string.charCodeAt(i));
+                        }
+                    };
+                    
+                    writeString(view, 0, 'RIFF');
+                    view.setUint32(4, 36 + buffer.length * bytesPerSample, true);
+                    writeString(view, 8, 'WAVE');
+                    writeString(view, 12, 'fmt ');
+                    view.setUint32(16, 16, true);
+                    view.setUint16(20, format, true);
+                    view.setUint16(22, numChannels, true);
+                    view.setUint32(24, sampleRate, true);
+                    view.setUint32(28, sampleRate * blockAlign, true);
+                    view.setUint16(32, blockAlign, true);
+                    view.setUint16(34, bitDepth, true);
+                    writeString(view, 36, 'data');
+                    view.setUint32(40, buffer.length * bytesPerSample, true);
+                    
+                    // Write audio data
+                    const samples = buffer.getChannelData(0);
+                    let offset = 44;
+                    for (let i = 0; i < samples.length; i++) {
+                        const sample = Math.max(-1, Math.min(1, samples[i]));
+                        view.setInt16(offset, sample * 0x7FFF, true);
+                        offset += 2;
+                    }
+                    
+                    return new Uint8Array(wav);
+                };
+
                 return {
                     inputText,
                     isGenerating,
@@ -252,7 +344,8 @@
                     generateRandomSentence,
                     currentChunkIndex,
                     playNextChunk,
-                    combinedAudioPlayer
+                    combinedAudioPlayer,
+                    combinedAudioUrl
                 };
             }
         });
