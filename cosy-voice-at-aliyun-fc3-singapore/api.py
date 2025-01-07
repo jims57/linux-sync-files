@@ -9,8 +9,15 @@ import warnings
 import onnxruntime as ort
 import io
 import base64
+from fastapi.responses import HTMLResponse
+from fastapi.staticfiles import StaticFiles
+import pathlib
 
 app = FastAPI()
+
+# Add static files mounting
+current_dir = pathlib.Path(__file__).parent
+app.mount("/static", StaticFiles(directory=str(current_dir)), name="static")
 
 # Configure ONNX Runtime global settings
 ort.set_default_logger_severity(3)
@@ -56,6 +63,10 @@ async def tts_endpoint(websocket: WebSocket):
         await websocket.send_json({"error": str(e)})
     finally:
         await websocket.close()
+
+@app.get("/", response_class=HTMLResponse)
+async def root():
+    return open("index.html").read()
 
 if __name__ == "__main__":
     import uvicorn
