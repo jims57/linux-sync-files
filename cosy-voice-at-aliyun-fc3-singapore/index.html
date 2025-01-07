@@ -86,7 +86,7 @@
             </div>
 
             <div class="audio-container" v-if="audioChunks.length > 0">
-                <h3>生成的音频片段:</h3>
+                <h3>生成的音频流片段:</h3>
                 <div class="chunk-item" v-for="chunk in audioChunks" :key="chunk.id">
                     <div>片段 #{{ chunk.id + 1 }}</div>
                     <audio :src="chunk.audioUrl" controls></audio>
