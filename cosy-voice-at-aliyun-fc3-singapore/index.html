@@ -86,6 +86,11 @@
             </div>
 
             <div class="audio-container" v-if="audioChunks.length > 0">
+                <h3>完整音频（合成后）：</h3>
+                <audio :src="combinedAudioUrl" controls v-if="combinedAudioUrl"></audio>
+            </div>
+
+            <div class="audio-container" v-if="audioChunks.length > 0">
                 <h3>生成的音频流片段:</h3>
                 <div class="chunk-item" v-for="chunk in audioChunks" :key="chunk.id">
                     <div>片段 #{{ chunk.id + 1 }}</div>
@@ -112,6 +117,7 @@
                 const isGenerating = ref(false);
                 const audioChunks = ref([]);
                 const generationProgress = ref(0);
+                const combinedAudioUrl = ref(null);
                 let ws = null;
 
                 const sentences = [
@@ -182,6 +188,9 @@
                     ws.onclose = () => {
                         isGenerating.value = false;
                         generationProgress.value = 100;
+                        
+                        // Combine all audio chunks when generation is complete
+                        combineAudioChunks();
                     };
 
                     ws.onerror = (error) => {
@@ -190,11 +199,34 @@
                     };
                 };
 
+                const combineAudioChunks = async () => {
+                    if (audioChunks.value.length === 0) return;
+                    
+                    // Create an array of audio blobs
+                    const audioPromises = audioChunks.value.map(chunk => 
+                        fetch(chunk.audioUrl).then(response => response.blob())
+                    );
+                    
+                    const audioBlobs = await Promise.all(audioPromises);
+                    const combinedBlob = new Blob(audioBlobs, { type: 'audio/wav' });
+                    
+                    // Clean up previous combined audio URL if it exists
+                    if (combinedAudioUrl.value) {
+                        URL.revokeObjectURL(combinedAudioUrl.value);
+                    }
+                    
+                    combinedAudioUrl.value = URL.createObjectURL(combinedBlob);
+                };
+
                 const clearAll = () => {
                     // Clean up audio URLs
                     audioChunks.value.forEach(chunk => {
                         URL.revokeObjectURL(chunk.audioUrl);
                     });
+                    if (combinedAudioUrl.value) {
+                        URL.revokeObjectURL(combinedAudioUrl.value);
+                        combinedAudioUrl.value = null;
+                    }
                     audioChunks.value = [];
                     generationProgress.value = 0;
                 };
@@ -216,7 +248,8 @@
                     generationProgress,
                     generateSpeech,
                     clearAll,
-                    generateRandomSentence
+                    generateRandomSentence,
+                    combinedAudioUrl
                 };
             }
         });
