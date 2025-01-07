@@ -82,6 +82,7 @@
             </el-form>
 
             <div class="status-indicator" v-if="isGenerating">
+                <div style="margin-bottom: 10px;">TTS生成中...</div>
                 <el-progress type="circle" :percentage="generationProgress"></el-progress>
             </div>
 
