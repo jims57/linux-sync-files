@@ -26,7 +26,7 @@ ort.set_default_logger_severity(3)
 providers = ['CUDAExecutionProvider', 'CPUExecutionProvider'] if 'CUDAExecutionProvider' in ort.get_available_providers() else ['CPUExecutionProvider']
 
 # Initialize CosyVoice2 globally
-cosyvoice = CosyVoice2('pretrained_models/CosyVoice2-0.5B', load_jit=False, load_trt=False)
+cosyvoice = CosyVoice2('pretrained_models/CosyVoice2-0.5B', load_jit=False, load_onnx = False ,load_trt=False)
 prompt_speech_16k = load_wav('zero_shot_prompt.wav', 16000)
 prompt = "希望你以后能够做的比我还好呦。"
 
